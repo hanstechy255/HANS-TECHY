@@ -1,56 +1,39 @@
+const express = require("express");
 const { default: makeWASocket, useMultiFileAuthState } = require("@whiskeysockets/baileys");
-const config = require("./config");
+const fs = require("fs");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const OWNER_NUMBER = process.env.OWNER_NUMBER || "+255674688818";
+const MODE = process.env.MODE || "qr"; // chaguo: "qr" au "number"
 
 async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState("auth_info");
-    const sock = makeWASocket({
-        auth: state,
-        printQRInTerminal: true
-    });
+  const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
+  const sock = makeWASocket({
+    auth: state,
+    printQRInTerminal: MODE === "qr", // QR itaonekana tu kama mode ni "qr"
+  });
 
-    sock.ev.on("creds.update", saveCreds);
+  sock.ev.on("creds.update", saveCreds);
 
-    sock.ev.on("messages.upsert", async ({ messages }) => {
-        const msg = messages[0];
-        if (!msg.message) return;
+  if (MODE === "number") {
+    console.log(`🤖 Bot imeanzishwa kwa namba: ${OWNER_NUMBER}`);
+    await sock.sendMessage(`${OWNER_NUMBER}@s.whatsapp.net`, { text: "✅ HANS TECHY bot imeanza kwa mode ya namba moja kwa moja!" });
+  }
 
-        const from = msg.key.remoteJid;
-        const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message) return;
+    const from = msg.key.remoteJid;
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
 
-        if (text && text.startsWith(config.prefix)) {
-            const command = text.slice(1).trim().toLowerCase();
-
-            // 🔒 Private Mode: ni owner pekee anaweza kutumia
-            if (config.mode === "private" && from !== config.ownerNumber + "@s.whatsapp.net") {
-                await sock.sendMessage(from, { text: "⚠️ Samahani, bot iko PRIVATE mode. Ni Hans pekee anaweza kutumia." });
-                return;
-            }
-
-            // 🔓 Public Mode: mtu yeyote anaweza kutumia
-            if (command === "ping") {
-                await sock.sendMessage(from, { text: "🏓 Pong! Bot HANS TECHY iko live." });
-            }
-
-            if (command === "help") {
-                await sock.sendMessage(from, { text: `🤖 ${config.botName} Commands:\n!ping - Test bot\n!help - List commands\n!mode public/private - Badilisha mode` });
-            }
-
-            // 👨‍💻 Owner anaweza kubadilisha mode
-            if (command.startsWith("mode")) {
-                if (from === config.ownerNumber + "@s.whatsapp.net") {
-                    const newMode = command.split(" ")[1];
-                    if (newMode === "public" || newMode === "private") {
-                        config.mode = newMode;
-                        await sock.sendMessage(from, { text: `✅ Mode imebadilishwa kuwa: ${newMode.toUpperCase()}` });
-                    } else {
-                        await sock.sendMessage(from, { text: "⚠️ Tumia: !mode public au !mode private" });
-                    }
-                } else {
-                    await sock.sendMessage(from, { text: "⚠️ Ni Hans pekee anaweza kubadilisha mode." });
-                }
-            }
-        }
-    });
+    if (text === "!ping") {
+      await sock.sendMessage(from, { text: "🏓 Pong! Bot HANS TECHY iko live." });
+    }
+  });
 }
+
+app.get("/", (req, res) => res.send("✅ HANS TECHY bot is running!"));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
 startBot();
