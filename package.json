@@ -1,12 +1,13 @@
 {
   "name": "hans-techy-bot",
-  "version": "20.18.0",
-  "description": "WhatsApp Bot HANS TECHY using Baileys",
+  "version": "1.0.0",
+  "description": "WhatsApp bot HANS TECHY using Baileys and Express",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
+    "express": "^4.18.2",
     "@whiskeysockets/baileys": "^6.7.5"
   }
 }
